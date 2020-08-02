@@ -19,6 +19,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=4,
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -40,3 +41,4 @@ if __name__ == '__main__':
     imshow(torchvision.utils.make_grid(images))
     # 정답(label) 출력
     print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+"""
