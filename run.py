@@ -4,7 +4,8 @@ import torch.optim as optim
 import load_data
 import models
 
-net = models()
+net = models(size=32, distance=5, input_node_n=64, output_node_n=10, convey=0.9)
+
 
 trainloader, testloader, classes = load_data.dataset()
 criterion = nn.CrossEntropyLoss()
