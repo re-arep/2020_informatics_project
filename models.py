@@ -1,4 +1,3 @@
-import numpy as np
 import random as rd
 import torch
 import torch.nn as nn
@@ -7,22 +6,22 @@ import torch.nn.functional as F
 
 class Map3D:
 
-    def __init__(self, vinput, size=16, distance=4, input_node_n=64, output_node_n=10, convey=0.9, rate=5):
+    def __init__(self, vinput, size=16, distance=4, input_node_n=64, convey=0.9, rate=5):
         super(Map3D, self).__init__()
         self.vinput = vinput
         self.size = size
         self.distance = distance
         self.padding = distance // 2
         self.input_node_n = input_node_n
-        self.output_node_n = output_node_n
         self.convey = convey
         self.input_node_list = []
-        self.output_node_list = []
-        self.frame = torch.zeros(size, size, size, dtype=torch.double)
-        self.neuron_matrix = torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
+        self.frame = nn.Parameter(torch.zeros(size, size, size, dtype=torch.double), requires_grad=True)
+        self.neuron_matrix = nn.Parameter(torch.zeros(size+self.padding, size+self.padding, size+self.padding,
+                                                      dtype=torch.double), requires_grad=True)
         self.neuron_matrix_dummy = \
-            torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
-        self.synapse_matrix = torch.zeros(size, size, size, dtype=torch.double)
+            nn.Parameter(torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
+                         , requires_grad=True)
+        self.synapse_matrix = nn.Parameter(torch.zeros(size, size, size, dtype=torch.double), requires_grad=True)
         self.rate = rate
         self.fc1 = nn.Linear(16*16*16, 1024)
         self.fc2 = nn.Linear(1024, 128)
@@ -56,13 +55,9 @@ class Map3D:
     def input_node(self):
         return Map3D.node_batch(self, self.input_node_n)
 
-    def ouput_node(self):
-        return Map3D.node_batch(self, self.output_node_n)
-
     def initial_set(self):
         Map3D.set(self)
         self.input_node_list = Map3D.input_node(self)
-        self.output_node_list = Map3D.ouput_node(self)
 
     def run(self, vinput):
         size = self.size
