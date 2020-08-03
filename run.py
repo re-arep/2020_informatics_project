@@ -33,8 +33,10 @@ class Map3D(nn.Module):
     def run(self, vinput):
         size = self.size
         padding = self.padding
-        vv = vinput.reshape(12, 16, 16)
-        self.neuron_matrix = torch.add(self.frame.clone(), vv)
+        vv = vinput.reshape(4, 12, 16, 16)
+        #self.frame = torch.add(self.frame.clone(), vv)
+        #self.neuron_matrix = torch.add(self.frame.clone(), vv)
+        self.neuron_matrix = F.pad(torch.add(self.frame, vv), pad=[self.padding, self.padding, self.padding, self.padding], value=0)
         print(self.neuron_matrix)
 
         for rate in range(self.rate):
@@ -42,7 +44,7 @@ class Map3D(nn.Module):
                 for j in range(size):
                     for k in range(size):
                         self.neuron_matrix_dummy += (self.synapse_matrix[i][j][k] *
-                                                     self.neuron_matrix[i:i+padding][j:j+padding][k:k+padding]).sum()
+                                                     self.neuron_matrix[i-padding:i+padding][j-padding:j+padding][k-padding:k+padding]).sum()
 
             self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
@@ -67,7 +69,7 @@ def running(epoch_n):
 
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
-            train_t = np.transpose(inputs[0], (2, 1, 0))
+            train_t = np.transpose(inputs, (0, 2, 3, 1))
             print(inputs.shape)
             print(train_t.shape)
             optimizer.zero_grad()
