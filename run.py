@@ -1,6 +1,5 @@
 import torch.optim as optim
 import load_data
-import random as rd
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,10 +34,7 @@ class Map3D(nn.Module):
         padding = self.padding
         distance = self.distance
         vv = vinput.reshape(12, 16, 16)
-        #self.frame = torch.add(self.frame.clone(), vv)
-        #self.neuron_matrix = torch.add(self.frame.clone(), vv)
         self.neuron_matrix = F.pad(torch.add(self.frame, vv), pad=[self.padding, self.padding, self.padding, self.padding, self.padding, self.padding,], value=0)
-        print(self.neuron_matrix.shape)
 
         for rate in range(self.rate):
             for i in range(size-4):
@@ -50,9 +46,7 @@ class Map3D(nn.Module):
             self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
         x = self.neuron_matrix[padding:size-4+padding, padding:size+padding, padding:size+padding].float()
-        print(x.shape)
         x = x.reshape(12*16*16)
-        print(x.shape)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -74,10 +68,13 @@ def running(epoch_n):
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
             for k in range(4):
-                train_t = np.transpose(inputs[0], (1, 2, 0))
+                input_t = np.transpose(inputs[k], (1, 2, 0))
+                labels_t = labels[k]
                 optimizer.zero_grad()
-                outputs = net.run(train_t)
-                loss = criterion(outputs, labels)
+                outputs = net.run(input_t)
+                print(outputs)
+                print(labels, labels_t)
+                loss = criterion(outputs, 1)
                 loss.backward()
                 optimizer.step()
 
