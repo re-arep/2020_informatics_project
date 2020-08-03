@@ -8,6 +8,7 @@ import torch.nn.functional as F
 class Map3D:
 
     def __init__(self, vinput, size=16, distance=4, input_node_n=64, output_node_n=10, convey=0.9, rate=5):
+        super(Map3D, self).__init__()
         self.vinput = vinput
         self.size = size
         self.distance = distance
@@ -77,14 +78,11 @@ class Map3D:
                         self.neuron_matrix_dummy += (self.synapse_matrix[i][j][k] *
                                                      self.neuron_matrix[i:i+padding][j:j+padding][k:k+padding]).sum()
 
-            self.neuron_matrix = np.where(self.neuron_matrix_dummy <= 0, 0, self.neuron_matrix_dummy * self.convey)
             self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
-        voutput = torch.zeros(30, dtype=torch.double)
-        for i in range(self.output_node_n):
-            data3 = \
-                self.neuron_matrix[self.output_node_list[i][0]][self.output_node_list[i][1]][self.output_node_list[i][2]]
+        x = self.neuron_matrix.view(-1, 16*16*16)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
 
-        x = F.relu(self.fc1(voutput))
-        x = self.fc2(x)
         return x

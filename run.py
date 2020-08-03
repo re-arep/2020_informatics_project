@@ -2,10 +2,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import load_data
-import models
+from models import Map3D
 
-net = models()
-
+net = Map3D
 
 trainloader, testloader, classes = load_data.dataset()
 criterion = nn.CrossEntropyLoss()
@@ -20,7 +19,7 @@ def running(epoch_n):
             inputs, labels = data
 
             optimizer.zero_grad()
-            outputs = net(inputs)
+            outputs = net.run(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
