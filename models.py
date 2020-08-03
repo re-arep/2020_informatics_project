@@ -1,11 +1,14 @@
 import numpy as np
 import random as rd
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Map3D:
 
-    def __init__(self, size, distance, input_node_n, output_node_n, convey, vinput, rate):
+    def __init__(self, vinput, size=16, distance=4, input_node_n=64, output_node_n=10, convey=0.9, rate=5):
+        self.vinput = vinput
         self.size = size
         self.distance = distance
         self.padding = distance // 2
@@ -16,10 +19,13 @@ class Map3D:
         self.output_node_list = []
         self.frame = torch.zeros(size, size, size, dtype=torch.double)
         self.neuron_matrix = torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
-        self.neuron_matrix_dummy = torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
+        self.neuron_matrix_dummy = \
+            torch.zeros(size+self.padding, size+self.padding, size+self.padding, dtype=torch.double)
         self.synapse_matrix = torch.zeros(size, size, size, dtype=torch.double)
-        self.vinput = vinput
         self.rate = rate
+        self.fc1 = nn.Linear(16*16*16, 1024)
+        self.fc2 = nn.Linear(1024, 128)
+        self.fc3 = nn.Linear(128, 10)
 
     def set(self):
         size = self.size
@@ -53,22 +59,9 @@ class Map3D:
         return Map3D.node_batch(self, self.output_node_n)
 
     def initial_set(self):
-        Map3D.set()
-        self.input_node_list = Map3D.input_node()
-        self.output_node_list = Map3D.ouput_node()
-
-    def input_data(self, vinput):
-        self.input_node_list = Map3D.node_batch(self.input_node_n)
-        for i in range(self.input_node_n):
-            self.neuron_matrix[self.input_node_list[i][0]][self.input_node_list[i][1]][self.input_node_list[i][2]]\
-                += vinput[i]
-
-    def output_data(self):
-        voutput = []
-        self.output_node_list = Map3D.node_batch(self.output_node_n)
-        for i in range(self.output_node_n):
-            voutput.append(self.neuron_matrix[self.output_node_list[i][0]][self.output_node_list[i][1]]
-                           [self.output_node_list[i][2]])
+        Map3D.set(self)
+        self.input_node_list = Map3D.input_node(self)
+        self.output_node_list = Map3D.ouput_node(self)
 
     def run(self, vinput):
         size = self.size
@@ -85,11 +78,13 @@ class Map3D:
                                                      self.neuron_matrix[i:i+padding][j:j+padding][k:k+padding]).sum()
 
             self.neuron_matrix = np.where(self.neuron_matrix_dummy <= 0, 0, self.neuron_matrix_dummy * self.convey)
+            self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
-        voutput = []
+        voutput = torch.zeros(30, dtype=torch.double)
         for i in range(self.output_node_n):
-            voutput.append(self.neuron_matrix[self.output_node_list[i][0]][self.output_node_list[i][1]]
-                           [self.output_node_list[i][2]])
+            data3 = \
+                self.neuron_matrix[self.output_node_list[i][0]][self.output_node_list[i][1]][self.output_node_list[i][2]]
 
-        return voutput
-
+        x = F.relu(self.fc1(voutput))
+        x = self.fc2(x)
+        return x
