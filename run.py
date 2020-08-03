@@ -31,17 +31,8 @@ class Map3D(nn.Module):
         self.fc2 = nn.Linear(1024, 128)
         self.fc3 = nn.Linear(128, 10)
 
-    def set(self):
-        size = self.size
-        for i in range(size):
-            for j in range(size):
-                for k in range(size):
-                    self.synapse_matrix[i][j][k].add_(torch.randn(self.distance, self.distance, self.distance))
-                    self.synapse_matrix = self.synapse_matrix.requires_grad_(True)
-        print(self.synapse_matrix)
-
     def node_batch(self, node_n):
-        frame = np.zeros((self.size+self.padding*2, self.size+self.padding*2, self.size+self.padding*2), dtype='i')
+        frame = torch.zeros((self.size+self.padding*2, self.size+self.padding*2, self.size+self.padding*2), dtype=torch.double)
         m = self.padding
         n = self.padding + self.size
         node_list = []
@@ -62,7 +53,6 @@ class Map3D(nn.Module):
         return Map3D.node_batch(self, self.input_node_n)
 
     def initial_set(self):
-        Map3D.set(self)
         self.input_node_list = Map3D.input_node(self)
 
     def run(self, vinput):
