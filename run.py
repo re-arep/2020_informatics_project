@@ -18,53 +18,27 @@ class Map3D(nn.Module):
         self.input_node_n = input_node_n
         self.convey = convey
         self.input_node_list = []
-        self.frame = nn.Parameter(torch.zeros(size, size, size-4, dtype=torch.double), requires_grad=True)
-        self.neuron_matrix = nn.Parameter(torch.zeros(size+self.padding*2, size+self.padding*2, size+self.padding*2-4,
+        self.frame = nn.Parameter(torch.zeros(size-4, size, size, dtype=torch.double), requires_grad=True)
+        self.neuron_matrix = nn.Parameter(torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2,
                                                       dtype=torch.double), requires_grad=True)
         self.neuron_matrix_dummy = \
-            nn.Parameter(torch.zeros(size+self.padding*2, size+self.padding*2, size+self.padding*2-4, dtype=torch.double)
+            nn.Parameter(torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2, dtype=torch.double)
                          , requires_grad=True)
-        self.synapse_matrix = nn.Parameter(torch.randn(size, size, size-4, distance, distance, distance, dtype=torch.double), requires_grad=True)
+        self.synapse_matrix = nn.Parameter(torch.randn(size-4, size, size, distance, distance, distance, dtype=torch.double), requires_grad=True)
         self.rate = rate
-        self.fc1 = nn.Linear(16*16*16, 1024)
+        self.fc1 = nn.Linear(12*16*16, 1024)
         self.fc2 = nn.Linear(1024, 128)
         self.fc3 = nn.Linear(128, 10)
-
-    def node_batch(self, node_n):
-        frame = torch.zeros((self.size+self.padding*2, self.size+self.padding*2, self.size+self.padding*2-4), dtype=torch.double)
-        m = self.padding
-        n = self.padding + self.size
-        node_value = 0
-        while True:
-            i = rd.randrange(m, n)
-            j = rd.randrange(m, n)
-            k = rd.randrange(m, n)
-            if frame[i][j][k] == 0:
-                node_value += 1
-                frame[i][j][k] = 1
-            else:
-                continue
-            if node_value == node_n:
-                break
-        return frame
-
-    def input_node(self):
-        return Map3D.node_batch(self, self.input_node_n)
-
-    def initial_set(self):
-        self.input_node_list = Map3D.input_node(self)
 
     def run(self, vinput):
         size = self.size
         padding = self.padding
         vv = vinput.reshape(12, 16, 16)
-        for i in range(self.input_node_n):
-            self.neuron_matrix[self.input_node_list[i][0]][self.input_node_list[i][1]][self.input_node_list[i][2]]\
-                += vinput[i]
+        self.neuron_matrix = torch.add(self.frame.clone(), vv)
         print(self.neuron_matrix)
 
         for rate in range(self.rate):
-            for i in range(size):
+            for i in range(size-4):
                 for j in range(size):
                     for k in range(size):
                         self.neuron_matrix_dummy += (self.synapse_matrix[i][j][k] *
@@ -72,7 +46,7 @@ class Map3D(nn.Module):
 
             self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
-        x = self.neuron_matrix.view(-1, 16*16*16)
+        x = self.neuron_matrix.view(-1, 12*16*16)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -81,7 +55,6 @@ class Map3D(nn.Module):
 
 
 net = Map3D()
-net.initial_set()
 
 trainloader, testloader, classes = load_data.dataset()
 criterion = nn.CrossEntropyLoss()
