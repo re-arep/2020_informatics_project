@@ -18,13 +18,13 @@ class Map3D(nn.Module):
         self.input_node_n = input_node_n
         self.convey = convey
         self.input_node_list = []
-        self.frame = nn.Parameter(torch.zeros(size-4, size, size, dtype=torch.double), requires_grad=True)
-        self.neuron_matrix = nn.Parameter(torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2,
-                                                      dtype=torch.double), requires_grad=True)
+        self.frame = torch.zeros(size-4, size, size, dtype=torch.double)
+        self.neuron_matrix = torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2,
+                                                      dtype=torch.double)
         self.neuron_matrix_dummy = \
-            nn.Parameter(torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2, dtype=torch.double)
-                         , requires_grad=True)
-        self.synapse_matrix = nn.Parameter(torch.randn(size-4, size, size, distance, distance, distance, dtype=torch.double), requires_grad=True)
+            torch.zeros(size+self.padding*2-4, size+self.padding*2, size+self.padding*2, dtype=torch.double)
+
+        self.synapse_matrix = torch.randn(size-4, size, size, distance, distance, distance, dtype=torch.double)
         self.rate = rate
         self.fc1 = nn.Linear(12*16*16, 1024)
         self.fc2 = nn.Linear(1024, 128)
@@ -33,22 +33,26 @@ class Map3D(nn.Module):
     def run(self, vinput):
         size = self.size
         padding = self.padding
-        vv = vinput.reshape(4, 12, 16, 16)
+        distance = self.distance
+        vv = vinput.reshape(12, 16, 16)
         #self.frame = torch.add(self.frame.clone(), vv)
         #self.neuron_matrix = torch.add(self.frame.clone(), vv)
-        self.neuron_matrix = F.pad(torch.add(self.frame, vv), pad=[self.padding, self.padding, self.padding, self.padding], value=0)
-        print(self.neuron_matrix)
+        self.neuron_matrix = F.pad(torch.add(self.frame, vv), pad=[self.padding, self.padding, self.padding, self.padding, self.padding, self.padding,], value=0)
+        print(self.neuron_matrix.shape)
 
         for rate in range(self.rate):
             for i in range(size-4):
                 for j in range(size):
                     for k in range(size):
-                        self.neuron_matrix_dummy += (self.synapse_matrix[i][j][k] *
-                                                     self.neuron_matrix[i-padding:i+padding][j-padding:j+padding][k-padding:k+padding]).sum()
+                        self.neuron_matrix_dummy[i][j][k] += (self.synapse_matrix[i][j][k]
+                                                              * self.neuron_matrix[i:i+distance, j:j+distance, k:k+distance]).sum()
 
             self.neuron_matrix = F.relu(self.neuron_matrix_dummy) * self.convey
 
-        x = self.neuron_matrix.view(-1, 12*16*16)
+        x = self.neuron_matrix[padding:size-4+padding, padding:size+padding, padding:size+padding].float()
+        print(x.shape)
+        x = x.reshape(12*16*16)
+        print(x.shape)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -69,14 +73,13 @@ def running(epoch_n):
 
         for i, data in enumerate(trainloader, 0):
             inputs, labels = data
-            train_t = np.transpose(inputs, (0, 2, 3, 1))
-            print(inputs.shape)
-            print(train_t.shape)
-            optimizer.zero_grad()
-            outputs = net.run(train_t)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            for k in range(4):
+                train_t = np.transpose(inputs[0], (1, 2, 0))
+                optimizer.zero_grad()
+                outputs = net.run(train_t)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
 
             # 통계를 출력합니다.
             running_loss += loss.item()
