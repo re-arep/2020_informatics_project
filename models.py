@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Map3D:
+class Map3D(nn.Module):
 
     def __init__(self, vinput, size=16, distance=4, input_node_n=64, convey=0.9, rate=5):
         super(Map3D, self).__init__()
