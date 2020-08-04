@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 class Map3D(nn.Module):
 
-    def __init__(self, size=16, distance=4, input_node_n=64, convey=0.9, rate=5):
+    def __init__(self, size=16, distance=4, input_node_n=64, convey=0.5, rate=5):
         super(Map3D, self).__init__()
         self.size = size
         self.desize = size-4
@@ -34,6 +34,8 @@ class Map3D(nn.Module):
         padding = self.padding
         distance = self.distance
         vv = vinput.reshape(12, 16, 16, 4)
+        self.neuron_matrix = torch.zeros(size + self.padding * 2 - 4, size + self.padding * 2, size + self.padding * 2,
+                                         4, dtype=torch.double)
         self.neuron_matrix = F.pad(torch.add(self.frame, vv), pad=[0, 0, self.padding, self.padding, self.padding, self.padding, self.padding, self.padding,], value=0)
 
         for rate in range(self.rate):
@@ -58,7 +60,7 @@ net = Map3D()
 
 trainloader, testloader, classes = load_data.dataset()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.00001, momentum=0.5)
 
 
 def running(epoch_n):
